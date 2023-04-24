@@ -21,7 +21,10 @@ void execute_p(char *args) {
         token = strtok(NULL, "|");
 
         int pid_child = fork();
-        if (pid_child == -1) perror("Error creating child process!");
+        if (pid_child == -1) {
+            write(STDERR_FILENO, "Error creating child process.\n", 30);
+            exit(EXIT_FAILURE);
+        }
         if (pid_child == 0) {
             char print[50]; sprintf(print, "----------------------------\nINPUT Nº %d\n", count);
             write(1, print, strlen(print));
