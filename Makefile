@@ -16,4 +16,4 @@ obj/tracer.o : src/tracer.c
 	gcc -Wall -g -c src/tracer.c -o obj/tracer.o
 
 clean:
-	rm -f bin/{tracer,monitor} obj/*.o tmp/*
+	rm -f bin/tracer bin/monitor obj/*.o tmp/*
