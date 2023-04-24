@@ -30,8 +30,20 @@ int main(int argc, char **argv) {
         long int milis;
     } process;
 
-    process executing[100]; int nr_executing = 0;
-    process executed[100]; int nr_executed = 0;
+    process *executing = malloc(sizeof(process) * 10); 
+    if (executing == NULL) {
+        printf("Failed to allocate memory for executing array.");
+        exit(EXIT_FAILURE);
+    }
+    int nr_executing = 0, capacity_executing = 10;
+
+    process *executed = malloc(sizeof(process) * 10); 
+    if (executed == NULL) {
+        printf("Failed to allocate memory for executed array.");
+        exit(EXIT_FAILURE);
+    }
+    int nr_executed = 0, capacity_executed = 10;
+
 
     int leitura;
     char buf[BUFFSIZE];
@@ -46,9 +58,30 @@ int main(int argc, char **argv) {
                 atol(strtok(NULL, ";"))
             };
 
-            if (strcmp(status,"executing") == 0) executing[nr_executing++] = this_process;
+            if (strcmp(status,"executing") == 0) {
+                if (nr_executing < capacity_executing) executing[nr_executing++] = this_process;
+                else {
+                    capacity_executing *= 2;
+                    executing = realloc(executing, capacity_executing * sizeof(process));
+                    if (executing == NULL) {
+                        printf("Failed to allocate memory for executing array.");
+                        exit(EXIT_FAILURE);
+                    }
+                    executing[nr_executing++] = this_process;
+                }
+            }
+
             if (strcmp(status,"executed") == 0) {
-                executed[nr_executed++] = this_process;
+                if (nr_executed < capacity_executed) executed[nr_executed++] = this_process;
+                else {
+                    capacity_executed *= 2;
+                    executed = realloc(executed, capacity_executed * sizeof(process));
+                    if (executed == NULL) {
+                        printf("Failed to allocate memory for executed array.");
+                        exit(EXIT_FAILURE);
+                    }
+                    executed[nr_executed++] = this_process;
+                }
 
                 int index = -1;
                 for(int i = 0; i < nr_executing; i++) {
@@ -61,6 +94,12 @@ int main(int argc, char **argv) {
 
                 nr_executing--;
             }
+
+            for(int i = 0; i < nr_executing; i++) printf("executing %d\n", executing[i].pid);
+            for(int i = 0; i < nr_executed; i++) printf("executed %d\n", executed[i].pid);
         }
     }
+
+    free(executed);
+    free(executing);
 }
