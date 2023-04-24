@@ -94,9 +94,6 @@ int main(int argc, char **argv) {
 
                 nr_executing--;
             }
-
-            for(int i = 0; i < nr_executing; i++) printf("executing %d\n", executing[i].pid);
-            for(int i = 0; i < nr_executed; i++) printf("executed %d\n", executed[i].pid);
         }
     }
 

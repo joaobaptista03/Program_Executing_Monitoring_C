@@ -1,5 +1,7 @@
-all: server client
+all: folders server client
 
+folders: 
+	@mkdir -p src obj bin tmp
 server: bin/monitor
 client: bin/tracer
 
