@@ -1,22 +1,19 @@
-CC = gcc
+all: server client
 
-tracer: obj/tracer.o obj/tracer_execute_p.o obj/tracer_execute_u.o obj/tracer_status.o obj/random.o
-	$(CC) $^ -o tracer
+server: bin/monitor
+client: bin/tracer
+
+bin/monitor: obj/monitor.o
+	gcc -g obj/monitor.o -o bin/monitor
+
+obj/monitor.o : src/monitor.c
+	gcc -Wall -g -c src/monitor.c -o obj/monitor.o
+
+bin/tracer: obj/tracer.o
+	gcc -g obj/tracer.o -o bin/tracer
 
 obj/tracer.o : src/tracer.c
-	$(CC) -c $< -o $@
-
-obj/tracer_execute_p.o : src/tracer_execute_p.c
-	$(CC) -c $< -o $@
-
-obj/tracer_execute_u.o : src/tracer_execute_u.c
-	$(CC) -c $< -o $@
-
-obj/tracer_status.o : src/tracer_status.c
-	$(CC) -c $< -o $@
-
-obj/random.o : src/random.c
-	$(CC) -c $< -o $@
+	gcc -Wall -g -c src/tracer.c -o obj/tracer.o
 
 clean:
-	rm -f tracer obj/*.o
+	rm -f bin/{tracer,monitor} obj/*.o tmp/*
