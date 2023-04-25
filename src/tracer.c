@@ -42,7 +42,7 @@ void execute_u(char *args, int fifo, bool pipeline) {
     else {
         int fork_child = fork();
         if (fork_child == -1) {
-            write(2, "Error creating child process.", 30);
+            write(2, "Error creating child process.\n", 31);
             exit(EXIT_FAILURE);
         }
         else if (fork_child == 0) execvp(prog_name, args_list);
@@ -59,7 +59,6 @@ void execute_u(char *args, int fifo, bool pipeline) {
     free(args_list);
     free(arg_str);
     free(arg);
-
 }
 
 char *strtrim(char *str) {
@@ -88,7 +87,7 @@ void execute_p(char *args, int fifo) {
 
         int pid_child = fork();
         if (pid_child == -1) {
-            write(STDERR_FILENO, "Error creating child process.\n", 30);
+            write(STDERR_FILENO, "Error creating child process.\n", 31);
             exit(EXIT_FAILURE);
         }
         if (pid_child == 0) {
@@ -103,8 +102,11 @@ void execute_p(char *args, int fifo) {
     }
 }
 
-void status() {
+void status(int write_fifo, int read_fifo) {
+    write(write_fifo, "status", 7);
 
+    char buf[BUFSIZE];
+    while ((read(read_fifo, buf, BUFSIZE) > 0) && (strcmp(buf, "finished") != 0)) puts(buf);
 }
 
 int main(int argc, char **argv) {
@@ -117,22 +119,27 @@ int main(int argc, char **argv) {
         exit(EXIT_FAILURE);
     }
 
-    else if (argc == 4) {
-        int fifo = open("tmp/fifo", O_WRONLY);
-            if (fifo < 0) {
-                write(2, "Error opening fifo.", 20);
-                exit(EXIT_FAILURE);
-            }
+    int write_fifo = open("tmp/ttm", O_WRONLY);
+        if (write_fifo < 0) {
+            write(2, "Error opening writing fifo.\n", 29);
+            exit(EXIT_FAILURE);
+        }
 
+    int read_fifo = open("tmp/mtt", O_RDONLY);
+        if (read_fifo < 0) {
+            write(2, "Error opening reading fifo.\n", 29);
+            exit(EXIT_FAILURE);
+        }
+
+    else if (argc == 4) {
         if (strcmp(argv[1], "execute") == 0) {
-            if (strcmp(argv[2], "-u") == 0) execute_u(argv[3], fifo, false);
-            else if (strcmp(argv[2], "-p") == 0) execute_p(argv[3], fifo);
+            if (strcmp(argv[2], "-u") == 0) execute_u(argv[3], write_fifo, false);
+            else if (strcmp(argv[2], "-p") == 0) execute_p(argv[3], write_fifo);
             else {
                 write(STDERR_FILENO, "Invalid execute argument.\n", 27);
                 exit(EXIT_FAILURE);
             }
         }
-
         else {
             write(STDERR_FILENO, "Invalid command.\n", 18);
             exit(EXIT_FAILURE);
@@ -140,7 +147,7 @@ int main(int argc, char **argv) {
     }
 
     else if (argc == 2) {
-        status();
+        status(write_fifo, read_fifo);
     }
 
     /* PROGRAM RUN TIME CALCULATION */
