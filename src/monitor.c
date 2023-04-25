@@ -57,11 +57,16 @@ int main(int argc, char **argv) {
         while ((leitura = read(fifo, buf, BUFFSIZE)) > 0) {
             char *status = strtok(buf,";");
 
+            char *pid = strtok(NULL, ";");
+            char *prog_name = strtok(NULL, ";");
+            char *secs = strtok(NULL, ";");
+            char *milis = strtok(NULL, ";");
+
             executing_process this_process = {
-                atoi(strtok(NULL, ";")),
-                strtok(NULL, ";"),
-                atol(strtok(NULL, ";")),
-                atol(strtok(NULL, ";"))
+                atoi(pid),
+                prog_name,
+                atol(secs),
+                atol(milis)
             };
 
             if (strcmp(status,"executing") == 0) {
@@ -80,17 +85,17 @@ int main(int argc, char **argv) {
             if (strcmp(status,"executed") == 0) {
                 
                 float exec_time = 0;
+                int index = -1;
                 for(int i = 0; i < nr_executing; i++) {
                     if (executing[i].pid == this_process.pid) {
+                        index = i;
                         if (this_process.secs == executing[i].secs) exec_time = (float) (this_process.milis - executing[i].milis) / (float) 1000;
                         else {
                             exec_time = ((float) this_process.milis + (float) (1000000 - executing[i].milis)) / (float) 1000;
                         }
+                        break;
                     }
                 }
-
-                this_process.secs = 0;
-                this_process.milis = exec_time;
 
                 executed_process new_executed = {
                     this_process.pid,
@@ -109,11 +114,6 @@ int main(int argc, char **argv) {
                     executed[nr_executed++] = new_executed;
                 }
 
-                int index = -1;
-                for(int i = 0; i < nr_executing; i++) {
-                    if (executing[i].pid == this_process.pid) index = i;
-                }
-
                 for(int i = index; i < nr_executing; i++) {
                     executing[i] = executing[i+1];
                 }
@@ -121,7 +121,7 @@ int main(int argc, char **argv) {
                 nr_executing--;
             }
 
-            for(int i = 0; i < nr_executed; i++) printf("executed in %f milliseconds\n", executed[i].exec_time);
+            for(int i = 0; i < nr_executed; i++) printf("%f\n", executed[i].exec_time);
         }
     }
 

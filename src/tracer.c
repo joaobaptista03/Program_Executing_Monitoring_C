@@ -110,7 +110,7 @@ void status() {
 int main(int argc, char **argv) {
 
     /* INITIALIZING CLOCK */
-    clock_t start = clock();
+    struct timeval tv_start; gettimeofday(&tv_start, NULL);
 
     if ((argc != 4 && argc != 2)) {
         write(STDERR_FILENO, "Invalid number of arguments.\n", 30);
@@ -144,9 +144,11 @@ int main(int argc, char **argv) {
     }
 
     /* PROGRAM RUN TIME CALCULATION */
-    clock_t end = clock();
-    double cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
-    printf("\nPROGRAM FINISHED (%f seconds)\n\n", cpu_time_used );
+    struct timeval tv_end; gettimeofday(&tv_end, NULL);
+    float exectime = 0;
+    if (tv_end.tv_sec == tv_start.tv_sec) exectime = (float) (tv_end.tv_usec - tv_start.tv_usec) / (float) (1000);
+    else exectime = ((float) tv_end.tv_usec + (float) (1000000 - tv_start.tv_usec)) / (float) 1000;
+    printf("\nPROGRAM FINISHED (%f milliseconds)\n\n", exectime);
 
     return 0;
 }
