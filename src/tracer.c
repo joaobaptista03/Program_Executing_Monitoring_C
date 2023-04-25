@@ -37,6 +37,8 @@ void execute_u(char *args, int fifo, bool pipeline) {
         args_list[num_args - 1] = strdup(arg);
         arg = strtok(NULL, " ");
     }
+    args_list = realloc(args_list, sizeof(char*) * (num_args + 1));
+    args_list[num_args] = NULL;
 
     if (pipeline) execvp(prog_name, args_list);
     else {
