@@ -1,12 +1,9 @@
-all:
-	folders server client
+all: folders server client
 
 folders: 
 	@mkdir -p src obj bin tmp
-server:
-	bin/monitor
-client:
-	bin/tracer
+server: bin/monitor
+client: bin/tracer
 
 bin/monitor: obj/monitor.o
 	gcc -g obj/monitor.o -o bin/monitor
