@@ -61,10 +61,14 @@ int main(int argc, char **argv) {
     }
     int nr_executed = 0, capacity_executed = 10;
 
+    double total_ms = 0;
+
     char buf[BUFFSIZE];
     while(1) {
         while (read(read_fifo, buf, BUFFSIZE) > 0) {
-            if (strcmp(buf,"status") == 0) {
+            char *end_ptr;
+            char *command = strtok(buf,";");
+            if (strcmp(command,"status") == 0) {
                 for (int i = 0; i < nr_executing; i++) {
                     float exec_time = 0;
                     struct timeval tv_now; gettimeofday(&tv_now, NULL);
@@ -78,8 +82,20 @@ int main(int argc, char **argv) {
                 write(write_fifo, "finished", 9);
             }
 
+            else if (strcmp(command,"stats_time") == 0) {
+                int nr_pid;
+                while ((nr_pid = strtol(strtok(NULL, ";"), &end_ptr, 10)) != 0) {
+                    for(int i = 0; i < nr_executed; i++) {
+                        if (executed[i].pid == nr_pid) {
+                            total_ms += executed[i].exec_time;
+                        }
+                    }
+                }
+                char totms[20]; sprintf(totms, "%f", total_ms);
+                total_ms = 0;
+                write(write_fifo, totms, sizeof(totms));
+            }
             else {
-                char *status = strtok(buf,";");
                 char *pid = strtok(NULL, ";");
                 char *prog_name = strtok(NULL, ";");
                 char *secs = strtok(NULL, ";");
@@ -92,7 +108,7 @@ int main(int argc, char **argv) {
                     atol(milis)
                 };
 
-                if (strcmp(status,"executing") == 0) {
+                if (strcmp(command,"executing") == 0) {
                     if (nr_executing < capacity_executing) executing[nr_executing++] = this_process;
                     else {
                         capacity_executing *= 2;
@@ -105,7 +121,7 @@ int main(int argc, char **argv) {
                     }
                 }
 
-                else if (strcmp(status,"executed") == 0) {
+                else if (strcmp(command,"executed") == 0) {
                     
                     float exec_time = 0;
                     int index = -1;

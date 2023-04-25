@@ -105,10 +105,24 @@ void execute_p(char *args, int fifo) {
 }
 
 void status(int write_fifo, int read_fifo) {
-    write(write_fifo, "status", 7);
+    write(write_fifo, "status;", 7);
 
     char buf[BUFSIZE];
     while ((read(read_fifo, buf, BUFSIZE) > 0) && (strcmp(buf, "finished") != 0)) puts(buf);
+}
+
+void stats_time(int write_fifo, int read_fifo, char **argv, int args) {
+    char newargs[BUFSIZE]; sprintf(newargs, "stats_time;");
+    for(int i = 2; i < args; i++) {
+        strcat(newargs, argv[i]);
+        strcat(newargs, ";");
+    }
+    strcat(newargs, "0");
+    write(write_fifo, newargs, sizeof(newargs));
+
+    char buf[BUFSIZE];
+    read(read_fifo, buf, BUFSIZE);
+    printf("Total execution time: %s ms.\n", buf);
 }
 
 int main(int argc, char **argv) {
@@ -116,7 +130,7 @@ int main(int argc, char **argv) {
     /* INITIALIZING CLOCK */
     struct timeval tv_start; gettimeofday(&tv_start, NULL);
 
-    if ((argc != 4 && argc != 2)) {
+    if ((argc < 2)) {
         write(STDERR_FILENO, "Invalid number of arguments.\n", 30);
         exit(EXIT_FAILURE);
     }
@@ -133,24 +147,19 @@ int main(int argc, char **argv) {
             exit(EXIT_FAILURE);
         }
 
-    else if (argc == 4) {
-        if (strcmp(argv[1], "execute") == 0) {
-            if (strcmp(argv[2], "-u") == 0) execute_u(argv[3], write_fifo, false);
-            else if (strcmp(argv[2], "-p") == 0) execute_p(argv[3], write_fifo);
-            else {
-                write(STDERR_FILENO, "Invalid execute argument.\n", 27);
-                exit(EXIT_FAILURE);
-            }
-        }
+    if (strcmp(argv[1], "execute") == 0) {
+        if (strcmp(argv[2], "-u") == 0) execute_u(argv[3], write_fifo, false);
+        else if (strcmp(argv[2], "-p") == 0) execute_p(argv[3], write_fifo);
         else {
-            write(STDERR_FILENO, "Invalid command.\n", 18);
+            write(STDERR_FILENO, "Invalid execute argument.\n", 27);
             exit(EXIT_FAILURE);
         }
     }
-
-    else if (argc == 2) {
-        status(write_fifo, read_fifo);
+    else if (strcmp(argv[1], "status") == 0) status(write_fifo, read_fifo);
+    else if (strcmp(argv[1], "stats-time") == 0) {
+        stats_time(write_fifo, read_fifo, argv, argc);
     }
+     
 
     /* PROGRAM RUN TIME CALCULATION */
     struct timeval tv_end; gettimeofday(&tv_end, NULL);
