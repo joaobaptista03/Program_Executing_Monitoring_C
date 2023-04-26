@@ -28,8 +28,8 @@ void execute_u(char *args, int fifo, bool pipeline) {
     write(fifo, send_fifo, BUFSIZE);
 
     char *arg_str = strtok(NULL, "");
-    char **args_list = NULL;
-    int num_args = 0;
+    char **args_list = malloc(sizeof(char*)); args_list[0] = prog_name; 
+    int num_args = 1;
     char *arg = strtok(arg_str, " ");
     while (arg != NULL) {
         num_args++;
@@ -54,12 +54,10 @@ void execute_u(char *args, int fifo, bool pipeline) {
     gettimeofday(&tv, NULL);
     char send_fifo2[BUFSIZ]; sprintf(send_fifo2, "executed;%d;%s;%ld;%ld", pid, prog_name, tv.tv_sec, tv.tv_usec);
     write(fifo, send_fifo2, BUFSIZE);
-
-    for (int i = 0; i < num_args; i++) {
+    for (int i = 1; i < num_args; i++) {
         free(args_list[i]);
     }
     free(args_list);
-    free(arg_str);
     free(arg);
 }
 
