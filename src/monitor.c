@@ -64,101 +64,99 @@ int main(int argc, char **argv) {
     double total_ms = 0;
 
     char buf[BUFFSIZE];
-    while(1) {
-        while (read(read_fifo, buf, BUFFSIZE) > 0) {
-            char *end_ptr;
-            char *command = strtok(buf,";");
-            if (strcmp(command,"status") == 0) {
-                for (int i = 0; i < nr_executing; i++) {
-                    float exec_time = 0;
-                    struct timeval tv_now; gettimeofday(&tv_now, NULL);
-                    if (tv_now.tv_sec == executing[i].secs) exec_time = (float) (tv_now.tv_usec - executing[i].milis) / (float) 1000;
-                    else {
-                        exec_time = ((float) tv_now.tv_usec + (float) (1000000 - executing[i].milis)) / (float) 1000;
-                    }
-                    char status[100]; sprintf(status, "PID: %d; Program: %s; Execution Time: %f\n", executing[i].pid, executing[i].prog_name, exec_time);
-                    write(write_fifo, status, sizeof(status));
+    while (read(read_fifo, buf, BUFFSIZE) > 0) {
+        char *end_ptr;
+        char *command = strtok(buf,";");
+        if (strcmp(command,"status") == 0) {
+            for (int i = 0; i < nr_executing; i++) {
+                float exec_time = 0;
+                struct timeval tv_now; gettimeofday(&tv_now, NULL);
+                if (tv_now.tv_sec == executing[i].secs) exec_time = (float) (tv_now.tv_usec - executing[i].milis) / (float) 1000;
+                else {
+                    exec_time = ((float) tv_now.tv_usec + (float) (1000000 - executing[i].milis)) / (float) 1000;
                 }
-                write(write_fifo, "finished", 9);
+                char status[100]; sprintf(status, "PID: %d; Program: %s; Execution Time: %f\n", executing[i].pid, executing[i].prog_name, exec_time);
+                write(write_fifo, status, sizeof(status));
+            }
+            write(write_fifo, "finished", 9);
+        }
+
+        else if (strcmp(command,"stats_time") == 0) {
+            int nr_pid;
+            while ((nr_pid = strtol(strtok(NULL, ";"), &end_ptr, 10)) != 0) {
+                for(int i = 0; i < nr_executed; i++) {
+                    if (executed[i].pid == nr_pid) {
+                        total_ms += executed[i].exec_time;
+                    }
+                }
+            }
+            char totms[20]; sprintf(totms, "%f", total_ms);
+            total_ms = 0;
+            write(write_fifo, totms, sizeof(totms));
+        }
+        else {
+            char *pid = strtok(NULL, ";");
+            char *prog_name = strtok(NULL, ";");
+            char *secs = strtok(NULL, ";");
+            char *milis = strtok(NULL, ";");
+
+            executing_process this_process = {
+                atoi(pid),
+                prog_name,
+                atol(secs),
+                atol(milis)
+            };
+
+            if (strcmp(command,"executing") == 0) {
+                if (nr_executing < capacity_executing) executing[nr_executing++] = this_process;
+                else {
+                    capacity_executing *= 2;
+                    executing = realloc(executing, capacity_executing * sizeof(executing_process));
+                    if (executing == NULL) {
+                        printf("Failed to allocate memory for executing array.");
+                        exit(EXIT_FAILURE);
+                    }
+                    executing[nr_executing++] = this_process;
+                }
             }
 
-            else if (strcmp(command,"stats_time") == 0) {
-                int nr_pid;
-                while ((nr_pid = strtol(strtok(NULL, ";"), &end_ptr, 10)) != 0) {
-                    for(int i = 0; i < nr_executed; i++) {
-                        if (executed[i].pid == nr_pid) {
-                            total_ms += executed[i].exec_time;
+            else if (strcmp(command,"executed") == 0) {
+                
+                float exec_time = 0;
+                int index = -1;
+                for(int i = 0; i < nr_executing; i++) {
+                    if (executing[i].pid == this_process.pid) {
+                        index = i;
+                        if (this_process.secs == executing[i].secs) exec_time = (float) (this_process.milis - executing[i].milis) / (float) 1000;
+                        else {
+                            exec_time = ((float) this_process.milis + (float) (1000000 - executing[i].milis)) / (float) 1000;
                         }
+                        break;
                     }
                 }
-                char totms[20]; sprintf(totms, "%f", total_ms);
-                total_ms = 0;
-                write(write_fifo, totms, sizeof(totms));
-            }
-            else {
-                char *pid = strtok(NULL, ";");
-                char *prog_name = strtok(NULL, ";");
-                char *secs = strtok(NULL, ";");
-                char *milis = strtok(NULL, ";");
 
-                executing_process this_process = {
-                    atoi(pid),
-                    prog_name,
-                    atol(secs),
-                    atol(milis)
+                executed_process new_executed = {
+                    this_process.pid,
+                    this_process.prog_name,
+                    exec_time
                 };
 
-                if (strcmp(command,"executing") == 0) {
-                    if (nr_executing < capacity_executing) executing[nr_executing++] = this_process;
-                    else {
-                        capacity_executing *= 2;
-                        executing = realloc(executing, capacity_executing * sizeof(executing_process));
-                        if (executing == NULL) {
-                            printf("Failed to allocate memory for executing array.");
-                            exit(EXIT_FAILURE);
-                        }
-                        executing[nr_executing++] = this_process;
+                if (nr_executed < capacity_executed) executed[nr_executed++] = new_executed;
+                else {
+                    capacity_executed *= 2;
+                    executed = realloc(executed, capacity_executed * sizeof(executed_process));
+                    if (executed == NULL) {
+                        printf("Failed to allocate memory for executed array.");
+                        exit(EXIT_FAILURE);
                     }
+                    executed[nr_executed++] = new_executed;
                 }
 
-                else if (strcmp(command,"executed") == 0) {
-                    
-                    float exec_time = 0;
-                    int index = -1;
-                    for(int i = 0; i < nr_executing; i++) {
-                        if (executing[i].pid == this_process.pid) {
-                            index = i;
-                            if (this_process.secs == executing[i].secs) exec_time = (float) (this_process.milis - executing[i].milis) / (float) 1000;
-                            else {
-                                exec_time = ((float) this_process.milis + (float) (1000000 - executing[i].milis)) / (float) 1000;
-                            }
-                            break;
-                        }
-                    }
-
-                    executed_process new_executed = {
-                        this_process.pid,
-                        this_process.prog_name,
-                        exec_time
-                    };
-
-                    if (nr_executed < capacity_executed) executed[nr_executed++] = new_executed;
-                    else {
-                        capacity_executed *= 2;
-                        executed = realloc(executed, capacity_executed * sizeof(executed_process));
-                        if (executed == NULL) {
-                            printf("Failed to allocate memory for executed array.");
-                            exit(EXIT_FAILURE);
-                        }
-                        executed[nr_executed++] = new_executed;
-                    }
-
-                    for(int i = index; i < nr_executing; i++) {
-                        executing[i] = executing[i+1];
-                    }
-
-                    nr_executing--;
+                for(int i = index; i < nr_executing; i++) {
+                    executing[i] = executing[i+1];
                 }
+
+                nr_executing--;
             }
         }
     }
