@@ -16,7 +16,7 @@ make
 
 ### Usage
 
-To use the monitor, run the `monitor` executable. Then you'll need to open another terminal and run the `tracer` executable to execute a command while monitor's running.
+To use the monitor, run the `monitor` executable. Then you'll need to open another terminal and run the `tracer` executable to execute commands while monitor's running.
 
 The following arguments are supported in the tracer:
 
