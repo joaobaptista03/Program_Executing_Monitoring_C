@@ -37,8 +37,8 @@ int main(int argc, char **argv) {
     typedef struct executing_process {
         int pid;
         char *prog_name;
-        long int secs;
-        long int milis;
+        long int sec;
+        long int usec;
     } executing_process;
 
     typedef struct executed_process {
@@ -98,13 +98,13 @@ int main(int argc, char **argv) {
             char *pid = strtok(NULL, ";");
             char *prog_name = strtok(NULL, ";");
             char *secs = strtok(NULL, ";");
-            char *milis = strtok(NULL, ";");
+            char *usec = strtok(NULL, ";");
 
             executing_process this_process = {
                 atoi(pid),
                 prog_name,
-                atol(secs),
-                atol(milis)
+                atol(sec),
+                atol(usec)
             };
 
             if (strcmp(command,"executing") == 0) {
