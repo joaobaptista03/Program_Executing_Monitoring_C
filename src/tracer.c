@@ -14,51 +14,68 @@
 
 #define BUFSIZE 1024
 
-void execute_u(char *args, int fifo, bool pipeline) {
-    pid_t pid = getpid();
-    char pid_write[20]; sprintf(pid_write, "PROCESS ID: %d\n", pid);
-    write(1, pid_write, strlen(pid_write));
-
-    char executing[BUFSIZE]; sprintf(executing, "EXECUTING \"%s\"\n", args);
-    write(1, executing, strlen(executing));
+void execute_u(char *args, int fifo) {
+    pid_t pid = 0;
+    int pd[2]; pipe(pd);
 
     char *prog_name = strtok(args, " ");
-    struct timeval tv; gettimeofday(&tv, NULL);
-    char send_fifo[BUFSIZ]; sprintf(send_fifo, "executing;%d;%s;%ld;%ld", pid, prog_name, tv.tv_sec, tv.tv_usec);
-    write(fifo, send_fifo, BUFSIZE);
-
     char *arg_str = strtok(NULL, "");
     char **args_list = malloc(sizeof(char*)); args_list[0] = prog_name; 
     int num_args = 1;
-    char *arg = strtok(arg_str, " ");
-    while (arg != NULL) {
+
+    while (arg_str != NULL) {
         num_args++;
         args_list = realloc(args_list, sizeof(char*) * num_args);
-        args_list[num_args - 1] = strdup(arg);
-        arg = strtok(NULL, " ");
+        args_list[num_args - 1] = strdup(arg_str);
+        arg_str = strtok(NULL, "");
     }
+
     args_list = realloc(args_list, sizeof(char*) * (num_args + 1));
     args_list[num_args] = NULL;
 
-    if (pipeline) execvp(prog_name, args_list);
-    else {
-        int fork_child = fork();
-        if (fork_child == -1) {
-            write(2, "Error creating child process.\n", 31);
-            exit(EXIT_FAILURE);
-        }
-        else if (fork_child == 0) execvp(prog_name, args_list);
-        else wait(NULL);
+    int fork_child = fork();
+
+    if (fork_child == -1) {
+        write(2, "Error creating child process.\n", 31);
+        exit(EXIT_FAILURE);
     }
 
-    gettimeofday(&tv, NULL);
-    char send_fifo2[BUFSIZ]; sprintf(send_fifo2, "executed;%d;%s;%ld;%ld", pid, prog_name, tv.tv_sec, tv.tv_usec);
+    else if (fork_child == 0) {
+        pid_t pid = getpid();
+        close(pd[0]); write(pd[1], &pid, sizeof(pid_t));
+        char pid_write[20]; sprintf(pid_write, "PROCESS ID: %d\n", getpid());
+        write(1, pid_write, strlen(pid_write));
+
+        char executing[BUFSIZE]; sprintf(executing, "EXECUTING \"%s\"\n", args);
+        write(1, executing, strlen(executing));
+
+        struct timeval tv; gettimeofday(&tv, NULL);
+        char send_fifo[BUFSIZ]; sprintf(send_fifo, "executing;%d;%s;%ld;%ld", getpid(), prog_name, tv.tv_sec, tv.tv_usec);
+        write(fifo, send_fifo, BUFSIZE);
+
+        if (execvp(prog_name, args_list) < 0) {
+            write(1, "Invalid command.\n", 18);
+            gettimeofday(&tv, NULL);
+            char send_fifo2[BUFSIZ]; sprintf(send_fifo2, "executed;%d;%s;%ld;%ld", getpid(), prog_name, tv.tv_sec, tv.tv_usec);
+            write(fifo, send_fifo2, BUFSIZE);
+            _exit(EXIT_FAILURE);
+        }
+    }
+
+    else {
+        wait(NULL);
+        close(pd[1]);
+        read(pd[0], &pid, sizeof(pid_t));
+    }
+
+    struct timeval tv2;
+    gettimeofday(&tv2, NULL);
+    char send_fifo2[BUFSIZ]; sprintf(send_fifo2, "executed;%d;%s;%ld;%ld", pid, prog_name, tv2.tv_sec, tv2.tv_usec);
     write(fifo, send_fifo2, BUFSIZE);
     for (int i = 1; i < num_args; i++) {
         free(args_list[i]);
     }
     free(args_list);
-    free(arg);
 }
 
 char *strtrim(char *str) {
@@ -78,28 +95,27 @@ char *strtrim(char *str) {
 }
 
 void execute_p(char *args, int fifo) {
-    char *token = strtok(args, "|");
-    int count = 0;
-    char *trimmed;
-    while (token != NULL) {
-        count++;
-        trimmed = strtrim(token);
+    char *command;
+    char **commands;
+    int num_commands = 0;
 
-        int pid_child = fork();
-        if (pid_child == -1) {
-            write(STDERR_FILENO, "Error creating child process.\n", 31);
-            exit(EXIT_FAILURE);
-        }
-        if (pid_child == 0) {
-            char print[50]; sprintf(print, "----------------------------\nINPUT Nº %d\n", count);
-            write(1, print, strlen(print));
-            execute_u(trimmed, fifo, true);
-        }
-        else wait(NULL);
-            
-
-        token = strtok(NULL, "|");
+    for (command = strtok(args, "|"); command != NULL; command = strtok(NULL, "")) {
+        num_commands++;
+        commands = realloc(commands, sizeof(char*) * num_commands);
+        commands[num_commands - 1] = strdup(command);
     }
+
+    for (int i = 1; i <= num_commands; i++) {
+        char print[50]; sprintf(print, "----------------------------\nINPUT Nº %d\n", i);
+        write(1, print, strlen(print));
+        char *trimmed = strtrim(commands[i-1]);
+        execute_u(trimmed, fifo);
+    }
+
+    for (int i = 1; i < num_commands; i++) {
+        free(commands[i]);
+    }
+    free(commands);
 }
 
 void status(int write_fifo, int read_fifo) {
@@ -145,8 +161,10 @@ int main(int argc, char **argv) {
             exit(EXIT_FAILURE);
         }
 
-    if (strcmp(argv[1], "execute") == 0) {
-        if (strcmp(argv[2], "-u") == 0) execute_u(argv[3], write_fifo, false);
+    if (strcmp(argv[1], "exit") == 0) write(write_fifo, "exit;", 6);
+
+    else if (strcmp(argv[1], "execute") == 0) {
+        if (strcmp(argv[2], "-u") == 0) execute_u(argv[3], write_fifo);
         else if (strcmp(argv[2], "-p") == 0) execute_p(argv[3], write_fifo);
         else {
             write(STDERR_FILENO, "Invalid execute argument.\n", 27);
@@ -157,6 +175,8 @@ int main(int argc, char **argv) {
     else if (strcmp(argv[1], "stats-time") == 0) {
         stats_time(write_fifo, read_fifo, argv, argc);
     }
+
+    else write(STDERR_FILENO, "Invalid command.\n", 18);
      
 
     /* PROGRAM RUN TIME CALCULATION */
@@ -164,7 +184,7 @@ int main(int argc, char **argv) {
     float exectime = 0;
     if (tv_end.tv_sec == tv_start.tv_sec) exectime = (float) (tv_end.tv_usec - tv_start.tv_usec) / (float) (1000);
     else exectime = ((float) tv_end.tv_usec + (float) (1000000 - tv_start.tv_usec)) / (float) 1000;
-    printf("\nPROGRAM FINISHED (%f milliseconds)\n\n", exectime);
+    printf("\nPROGRAM FINISHED (%f milliseconds)\n-------------------------------------\n", exectime);
 
     return 0;
 }
