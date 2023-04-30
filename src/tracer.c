@@ -172,7 +172,9 @@ int main(int argc, char **argv) {
             exit(EXIT_FAILURE);
         }
     }
+    
     else if (strcmp(argv[1], "status") == 0) status(write_fifo, read_fifo);
+
     else if (strcmp(argv[1], "stats-time") == 0) {
         stats_time(write_fifo, read_fifo, argv, argc);
     }

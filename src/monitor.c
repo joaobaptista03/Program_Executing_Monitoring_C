@@ -78,13 +78,9 @@ int main(int argc, char **argv) {
 
             else if (strcmp(command,"status") == 0) {
                 for (int i = 0; i < nr_executing; i++) {
-                    float exec_time = 0;
                     struct timeval tv_now; gettimeofday(&tv_now, NULL);
-                    if (tv_now.tv_sec == executing[i].secs) exec_time = (float) (tv_now.tv_usec - executing[i].usec) / (float) 1000;
-                    else {
-                        exec_time = ((float) tv_now.tv_usec + (float) (1000000 - executing[i].usec)) / (float) 1000;
-                    }
-                    char status[100]; sprintf(status, "PID: %d; Program: %s; Execution Time: %f\n", executing[i].pid, executing[i].prog_name, exec_time);
+                    long long exec_time = ((tv_now.tv_sec - executing[i].secs) * 1000000LL) + (tv_now.tv_usec - executing[i].usec);
+                    char status[100]; sprintf(status, "PID: %d; Program: %s; Execution Time: %lld ms\n", executing[i].pid, executing[i].prog_name, exec_time);
                     write(write_fifo, status, sizeof(status));
                 }
                 write(write_fifo, "finished", 9);
