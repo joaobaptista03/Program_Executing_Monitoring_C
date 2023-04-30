@@ -140,8 +140,6 @@ void stats_time(int write_fifo, int read_fifo, char **argv, int args) {
 }
 
 int main(int argc, char **argv) {
-
-    /* INITIALIZING CLOCK */
     struct timeval tv_start; gettimeofday(&tv_start, NULL);
 
     if ((argc < 2)) {
@@ -177,9 +175,7 @@ int main(int argc, char **argv) {
     }
 
     else write(STDERR_FILENO, "Invalid command.\n", 18);
-     
 
-    /* PROGRAM RUN TIME CALCULATION */
     struct timeval tv_end; gettimeofday(&tv_end, NULL);
     float exectime = 0;
     if (tv_end.tv_sec == tv_start.tv_sec) exectime = (float) (tv_end.tv_usec - tv_start.tv_usec) / (float) (1000);
