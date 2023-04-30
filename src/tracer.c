@@ -43,7 +43,7 @@ void execute_u(char *args, int fifo) {
     else if (fork_child == 0) {
         pid_t pid = getpid();
         close(pd[0]); write(pd[1], &pid, sizeof(pid_t));
-        char pid_write[20]; sprintf(pid_write, "PROCESS ID: %d\n", getpid());
+        char pid_write[20]; sprintf(pid_write, "PROCESS ID: %d\n", pid);
         write(1, pid_write, strlen(pid_write));
 
         char executing[BUFSIZE]; sprintf(executing, "EXECUTING \"%s\"\n", args);
@@ -98,6 +98,9 @@ void execute_p(char *args, int fifo) {
     char *command;
     char **commands;
     int num_commands = 0;
+
+    char pid_write[30]; sprintf(pid_write, "\nMAIN PROCESS ID: %d\n", getpid());
+    write(1, pid_write, strlen(pid_write));
 
     for (command = strtok(args, "|"); command != NULL; command = strtok(NULL, "")) {
         num_commands++;
