@@ -1,6 +1,8 @@
-## Monitor
+## Program Executing Monitoring
 
-This is a simple C program that acts as a monitor for a set of processes. 
+## Description
+
+This University project involves creating a C program that manages and monitors process executions in a Unix-like system. It features process creation, execution using fork-exec patterns, real-time monitoring through FIFOs (named pipes), and performance analysis by tracking execution times. The project aims to provide practical insights into operating systems' process management and inter-process communication.
 
 ### Prerequisites
 
